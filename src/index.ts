@@ -23,8 +23,9 @@
  */
 
 import {
+  spinalContextMenuService,
   SpinalContextApp
-} from"spinal-env-viewer-context-menu-service";
+} from "spinal-env-viewer-context-menu-service";
 import { serviceDocumentation } from "spinal-env-viewer-plugin-documentation-service";
 import geographicService from "spinal-env-viewer-context-geographic-service";
 const geographicConstants = geographicService.constants;
@@ -51,7 +52,7 @@ function getEquipmentNodes(context) {
 }
 
 async function createCategory(bimDbId, model, attrs) {
-
+  if (attrs.length === 0) return;
   let bimRealNode = await (<any>window).spinal.BimObjectService.getBIMObject(bimDbId, model);
   let categoryName = "GMAO";
 
@@ -59,7 +60,6 @@ async function createCategory(bimDbId, model, attrs) {
     if (typeof category === "undefined") {
       category = await serviceDocumentation.addCategoryAttribute(bimRealNode, categoryName);
     }
-    // const attrs = [createAttr("ENS GMAO"), createAttr("ID_Materiel")];
     let allAttributes = await serviceDocumentation.getAllAttributes(bimRealNode);
     for (const element of allAttributes) {
       for (const attr of attrs) {
@@ -88,7 +88,7 @@ function getProps(model: any, dbid: number): Promise<{ dbId: number, properties:
 
 
 async function getAttr(bimObjNode, model, attrsToGet) {
-  const dbId = bimObjNode.info.dbId.get();
+  const dbId = bimObjNode.info.dbid.get();
   const res = [];
   const props = await getProps(model, dbId);
 
@@ -104,7 +104,7 @@ async function getAttr(bimObjNode, model, attrsToGet) {
       }
     }
   }
-
+  return res;
 }
 class SpinalSemlGetattr extends SpinalContextApp {
   constructor() {
@@ -120,13 +120,14 @@ class SpinalSemlGetattr extends SpinalContextApp {
   }
 
   async action(option) {
-    const equipmentNodes = await getEquipmentNodes(option.selectedNode.id.get());
+    const context = (<any>window).spinal.spinalGraphService.getRealNode(option.selectedNode.id.get());
+    const equipmentNodes = await getEquipmentNodes(context);
     for (const bimObj of equipmentNodes) {
       const bimFileId = bimObj.info.bimFileId.get();
       const model = (<any>window).spinal.BimObjectService.getModelByBimfile(bimFileId);
       // eslint-disable-next-line no-await-in-loop
       const attrs = await getAttr(bimObj, model, ['ENS GMAO', 'ID_Materiel']);
-      createCategory(bimObj.info.dbId.get(), model, attrs);
+      createCategory(bimObj.info.dbid.get(), model, attrs);
     }
 
   }
@@ -140,3 +141,4 @@ export {
 
 
 
+spinalContextMenuService.registerApp("GraphManagerSideBar", new SpinalSemlGetattr(), [3]);

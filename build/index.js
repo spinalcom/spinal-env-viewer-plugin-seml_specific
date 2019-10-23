@@ -58,13 +58,14 @@ function getEquipmentNodes(context) {
 }
 function createCategory(bimDbId, model, attrs) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (attrs.length === 0)
+            return;
         let bimRealNode = yield window.spinal.BimObjectService.getBIMObject(bimDbId, model);
         let categoryName = "GMAO";
         return spinal_env_viewer_plugin_documentation_service_1.serviceDocumentation.getCategoryByName(bimRealNode, categoryName).then((category) => __awaiter(this, void 0, void 0, function* () {
             if (typeof category === "undefined") {
                 category = yield spinal_env_viewer_plugin_documentation_service_1.serviceDocumentation.addCategoryAttribute(bimRealNode, categoryName);
             }
-            // const attrs = [createAttr("ENS GMAO"), createAttr("ID_Materiel")];
             let allAttributes = yield spinal_env_viewer_plugin_documentation_service_1.serviceDocumentation.getAllAttributes(bimRealNode);
             for (const element of allAttributes) {
                 for (const attr of attrs) {
@@ -92,7 +93,7 @@ function getProps(model, dbid) {
 }
 function getAttr(bimObjNode, model, attrsToGet) {
     return __awaiter(this, void 0, void 0, function* () {
-        const dbId = bimObjNode.info.dbId.get();
+        const dbId = bimObjNode.info.dbid.get();
         const res = [];
         const props = yield getProps(model, dbId);
         for (const property of props.properties) {
@@ -107,6 +108,7 @@ function getAttr(bimObjNode, model, attrsToGet) {
                 }
             }
         }
+        return res;
     });
 }
 class SpinalSemlGetattr extends spinal_env_viewer_context_menu_service_1.SpinalContextApp {
@@ -124,16 +126,18 @@ class SpinalSemlGetattr extends spinal_env_viewer_context_menu_service_1.SpinalC
     }
     action(option) {
         return __awaiter(this, void 0, void 0, function* () {
-            const equipmentNodes = yield getEquipmentNodes(option.selectedNode.id.get());
+            const context = window.spinal.spinalGraphService.getRealNode(option.selectedNode.id.get());
+            const equipmentNodes = yield getEquipmentNodes(context);
             for (const bimObj of equipmentNodes) {
                 const bimFileId = bimObj.info.bimFileId.get();
                 const model = window.spinal.BimObjectService.getModelByBimfile(bimFileId);
                 // eslint-disable-next-line no-await-in-loop
                 const attrs = yield getAttr(bimObj, model, ['ENS GMAO', 'ID_Materiel']);
-                createCategory(bimObj.info.dbId.get(), model, attrs);
+                createCategory(bimObj.info.dbid.get(), model, attrs);
             }
         });
     }
 }
 exports.SpinalSemlGetattr = SpinalSemlGetattr;
+spinal_env_viewer_context_menu_service_1.spinalContextMenuService.registerApp("GraphManagerSideBar", new SpinalSemlGetattr(), [3]);
 //# sourceMappingURL=index.js.map
